@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+finance.db
+backups/
+uploads/
+logs/
+instance/
+ai_uploads/
+desktop.ini
