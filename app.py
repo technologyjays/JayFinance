@@ -612,10 +612,12 @@ def dashboard():
 @app.route("/transaksi")
 def transaksi_page():
 
+    bulan = request.args.get("bulan", "").strip()
+
     conn = get_db()
 
     month_rows = conn.execute("""
-        SELECT DISTINCT substr(tanggal,1,7) AS bulan
+        SELECT DISTINCT SUBSTRING(tanggal, 1, 7) AS bulan
         FROM transaksi
         WHERE tanggal IS NOT NULL
           AND tanggal <> ''
@@ -623,167 +625,89 @@ def transaksi_page():
     """).fetchall()
 
     months = [
-        row["bulan"]
+        str(row["bulan"])
         for row in month_rows
+        if row["bulan"]
     ]
 
-    bulan = request.args.get(
-        "bulan",
-        ""
-    )
-
-    if bulan not in months:
-
-        bulan = (
-            months[0]
-            if months
-            else date.today().strftime("%Y-%m")
-        )
+    if not bulan or bulan not in months:
+        bulan = months[0] if months else date.today().strftime("%Y-%m")
 
     data = conn.execute("""
         SELECT *
         FROM transaksi
         WHERE tanggal LIKE %s
         ORDER BY tanggal DESC, id DESC
-    """, (
-        bulan + "%",
-    )).fetchall()
+    """, (bulan + "%",)).fetchall()
 
     conn.close()
 
-    options = ""
-
-    for m in months:
-
-        selected = (
-            "selected"
-            if m == bulan
-            else ""
-        )
-
-        options += (
-            f'<option value="{escape(m)}" {selected}>'
-            f'{escape(m)}'
-            f'</option>'
-        )
+    options = "".join(
+        f'<option value="{escape(m)}" {"selected" if m == bulan else ""}>{escape(m)}</option>'
+        for m in months
+    )
 
     rows = ""
 
     for row in data:
 
         if row["tipe"] == "Transfer":
-
             platform = (
                 escape(row["dari_platform"] or "-")
                 + " → "
                 + escape(row["ke_platform"] or "-")
             )
-
             badge = "transfer"
-
         else:
-
-            platform = escape(
-                row["platform"] or "-"
-            )
-
-            badge = (
-                "income"
-                if row["tipe"] == "Pemasukan"
-                else "expense"
-            )
+            platform = escape(row["platform"] or "-")
+            badge = "income" if row["tipe"] == "Pemasukan" else "expense"
 
         rows += f"""
         <tr>
-
-            <td>{escape(row["tanggal"])}</td>
-
-            <td>{escape(row["keterangan"])}</td>
-
-            <td>{escape(row["kategori"])}</td>
-
+            <td>{escape(str(row["tanggal"] or ""))}</td>
+            <td>{escape(str(row["keterangan"] or ""))}</td>
+            <td>{escape(str(row["kategori"] or ""))}</td>
             <td>{platform}</td>
-
+            <td><span class="badge {badge}">{escape(str(row["tipe"] or ""))}</span></td>
+            <td class="nominal">{rupiah(row["nominal"])}</td>
             <td>
-                <span class="badge {badge}">
-                    {escape(row["tipe"])}
-                </span>
+                <a class="btn btn-edit" href="/edit/{row["id"]}?bulan={escape(bulan)}">Edit</a>
+                <a class="btn btn-delete" href="/hapus/{row["id"]}?bulan={escape(bulan)}"
+                   onclick="return confirm('Hapus transaksi ini?')">Hapus</a>
             </td>
-
-            <td class="nominal">
-                {rupiah(row["nominal"])}
-            </td>
-
-            <td>
-
-                <a
-                    class="btn btn-edit"
-                    href="/edit/{row["id"]}?bulan={bulan}"
-                >
-                    Edit
-                </a>
-
-                <a
-                    class="btn btn-delete"
-                    href="/hapus/{row["id"]}?bulan={bulan}"
-                    onclick="return confirm('Hapus transaksi ini?')"
-                >
-                    Hapus
-                </a>
-
-            </td>
-
         </tr>
         """
 
     if not rows:
-
         rows = """
         <tr>
-            <td colspan="7" class="empty">
-                Belum ada transaksi.
-            </td>
+            <td colspan="7" class="empty">Belum ada transaksi.</td>
         </tr>
         """
 
     body = f"""
-
     <div class="card">
-
         <h1>💳 Transaksi</h1>
 
         <label>Pilih Bulan</label>
 
         <select class="month-picker"
-            onchange="location.href='/transaksi?bulan=' + this.value"
-        >
-
+                onchange="location.href='/transaksi?bulan=' + encodeURIComponent(this.value)">
             {options}
-
         </select>
 
         <br><br>
 
-        <a
-            class="btn btn-green"
-            href="/tambah"
-        >
+        <a class="btn btn-green" href="/tambah">
             + Tambah Transaksi
         </a>
-
     </div>
 
-
     <div class="card">
-
         <div style="overflow-x:auto;">
-
             <table>
-
                 <thead>
-
                     <tr>
-
                         <th>Tanggal</th>
                         <th>Keterangan</th>
                         <th>Kategori</th>
@@ -791,36 +715,24 @@ def transaksi_page():
                         <th>Tipe</th>
                         <th>Nominal</th>
                         <th>Aksi</th>
-
                     </tr>
-
                 </thead>
-
                 <tbody>
-
                     {rows}
-
                 </tbody>
-
             </table>
-
         </div>
-
     </div>
-
     """
 
-    return page(
-        "JayFinance - Transaksi",
-        body
-    )
+    return page("JayFinance - Transaksi", body)
 
 
 # =========================================================
 # TAMBAH TRANSAKSI
 # =========================================================
 
-@app.route("/tambah", methods=["GET", "POST"])
+, methods=["GET", "POST"])
 def tambah():
 
     if request.method == "POST":
