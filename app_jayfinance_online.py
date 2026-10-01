@@ -1955,6 +1955,16 @@ def aset_page():
 
             <td>{escape(row["catatan"] or "")}</td>
 
+            <td>
+                <a class="btn btn-edit" href="/aset/edit/{row["id"]}">
+                    Edit
+                </a>
+
+                <a class="btn btn-delete" href="/aset/hapus/{row["id"]}" onclick="return confirm('Hapus aset ini?')">
+                    Hapus
+                </a>
+            </td>
+
         </tr>
         """
 
@@ -1962,7 +1972,7 @@ def aset_page():
 
         rows = """
         <tr>
-            <td colspan="8" class="empty">
+            <td colspan="9" class="empty">
                 Belum ada aset.
             </td>
         </tr>
@@ -2019,6 +2029,7 @@ def aset_page():
                         <th>Keuntungan</th>
                         <th>Imbal Hasil</th>
                         <th>Catatan</th>
+                        <th>Aksi</th>
 
                     </tr>
 
@@ -2237,6 +2248,120 @@ def tambah_aset():
 # =========================================================
 # LAPORAN
 # =========================================================
+
+@app.route("/aset/edit/<int:id>", methods=["GET", "POST"])
+def edit_aset(id):
+
+    conn = get_db()
+
+    row = conn.execute("""
+        SELECT *
+        FROM aset
+        WHERE id=%s
+    """, (id,)).fetchone()
+
+    if not row:
+        conn.close()
+        return "Aset tidak ditemukan.", 404
+
+    if request.method == "POST":
+
+        nama = request.form.get("nama", "").strip()
+        jenis = request.form.get("jenis", "").strip()
+        kepemilikan = request.form.get("kepemilikan", "").strip()
+        tanggal = request.form.get("tanggal", "")
+        nilai = parse_nominal(request.form.get("nilai", "0"))
+        keuntungan = parse_nominal(request.form.get("keuntungan", "0"))
+
+        try:
+            imbal_hasil = float(request.form.get("imbal_hasil", "0"))
+        except:
+            imbal_hasil = 0
+
+        catatan = request.form.get("catatan", "").strip()
+
+        conn.execute("""
+            UPDATE aset
+            SET
+                nama=%s,
+                jenis=%s,
+                kepemilikan=%s,
+                tanggal=%s,
+                nilai=%s,
+                keuntungan=%s,
+                imbal_hasil=%s,
+                catatan=%s
+            WHERE id=%s
+        """, (
+            nama, jenis, kepemilikan, tanggal,
+            nilai, keuntungan, imbal_hasil, catatan, id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return redirect("/aset")
+
+    conn.close()
+
+    body = f"""
+    <div class="card">
+
+        <h1>✏️ Edit Aset</h1>
+
+        <form method="POST">
+
+            <label>Nama</label>
+            <input name="nama" value="{escape(row["nama"] or "")}" required>
+
+            <label>Jenis</label>
+            <input name="jenis" value="{escape(row["jenis"] or "")}" placeholder="Contoh: Saham / Reksadana" required>
+
+            <label>Kepemilikan</label>
+            <input name="kepemilikan" value="{escape(row["kepemilikan"] or "")}" placeholder="Pribadi">
+
+            <label>Tanggal</label>
+            <input type="date" name="tanggal" value="{escape(str(row["tanggal"] or "")[:10])}" required>
+
+            <label>Nilai</label>
+            <input type="number" name="nilai" value="{row["nilai"] or 0}" min="0" required>
+
+            <label>Keuntungan</label>
+            <input type="number" name="keuntungan" value="{row["keuntungan"] or 0}">
+
+            <label>Imbal Hasil (%)</label>
+            <input type="number" step="0.01" name="imbal_hasil" value="{row["imbal_hasil"] or 0}">
+
+            <label>Catatan</label>
+            <input name="catatan" value="{escape(row["catatan"] or "")}">
+
+            <button class="full-button" type="submit">
+                Simpan Perubahan
+            </button>
+
+        </form>
+
+    </div>
+    """
+
+    return page("Edit Aset", body)
+
+
+@app.route("/aset/hapus/<int:id>")
+def hapus_aset(id):
+
+    conn = get_db()
+
+    conn.execute("""
+        DELETE FROM aset
+        WHERE id=%s
+    """, (id,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/aset")
+
 
 @app.route("/laporan")
 def laporan():
