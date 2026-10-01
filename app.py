@@ -170,6 +170,10 @@ DB_READY = False
 def ensure_database():
     global DB_READY
 
+    # Favicon tidak membutuhkan database.
+    if request.path in ("/favicon.ico", "/favicon.png"):
+        return None
+
     if not DB_READY:
         init_db()
         DB_READY = True
