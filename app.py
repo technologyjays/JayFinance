@@ -1,5 +1,4 @@
-from urllib.parse import quote
-from flask import Flask, request, redirect, render_template_string
+from flask import Flask, request, redirect, render_template_string, url_for
 try:
     from openai import OpenAI
 except Exception:
@@ -1110,7 +1109,7 @@ def edit(id):
         )
 
         return redirect(
-            f"/transaksi?bulan={quote(str(bulan))}"
+            url_for("transaksi_page", bulan=str(bulan))
         )
 
     conn.close()
@@ -1382,7 +1381,7 @@ def hapus(id):
     )
 
     return redirect(
-        f"/transaksi?bulan={quote(str(bulan))}"
+        url_for("transaksi_page", bulan=str(bulan))
     )
 
 
