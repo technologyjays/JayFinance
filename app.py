@@ -28,8 +28,6 @@ except Exception:
 app = Flask(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL belum diset.")
 
 # Vercel's filesystem is read-only except /tmp.
 # Keep temporary uploads/backups/logs in /tmp when deployed there.
@@ -164,7 +162,17 @@ def init_db():
     conn.close()
 
 
-init_db()
+
+DB_READY = False
+
+
+@app.before_request
+def ensure_database():
+    global DB_READY
+
+    if not DB_READY:
+        init_db()
+        DB_READY = True
 
 
 # =========================================================
