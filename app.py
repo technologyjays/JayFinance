@@ -536,6 +536,12 @@ def page(title, body):
 # DASHBOARD
 # =========================================================
 
+@app.route("/favicon.ico")
+@app.route("/favicon.png")
+def favicon():
+    return "", 204
+
+
 @app.route("/")
 def dashboard():
     conn = get_db()
