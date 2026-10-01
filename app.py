@@ -1,3 +1,4 @@
+from urllib.parse import quote
 from flask import Flask, request, redirect, render_template_string
 try:
     from openai import OpenAI
@@ -1109,7 +1110,7 @@ def edit(id):
         )
 
         return redirect(
-            "/transaksi%sbulan=" + bulan
+            f"/transaksi?bulan={quote(str(bulan))}"
         )
 
     conn.close()
@@ -1381,7 +1382,7 @@ def hapus(id):
     )
 
     return redirect(
-        "/transaksi%sbulan=" + bulan
+        f"/transaksi?bulan={quote(str(bulan))}"
     )
 
 
