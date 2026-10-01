@@ -31,9 +31,16 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL belum diset.")
 
-UPLOAD_FOLDER = "ai_uploads"
-BACKUP_FOLDER = "backups"
-LOG_FOLDER = "logs"
+# Vercel's filesystem is read-only except /tmp.
+# Keep temporary uploads/backups/logs in /tmp when deployed there.
+if os.getenv("VERCEL"):
+    RUNTIME_DIR = "/tmp/jayfinance"
+else:
+    RUNTIME_DIR = os.path.dirname(os.path.abspath(__file__))
+
+UPLOAD_FOLDER = os.path.join(RUNTIME_DIR, "ai_uploads")
+BACKUP_FOLDER = os.path.join(RUNTIME_DIR, "backups")
+LOG_FOLDER = os.path.join(RUNTIME_DIR, "logs")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(BACKUP_FOLDER, exist_ok=True)
